@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>CogLoop — Metacognition Coach (Demo)</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.2.0/dist/tabler-icons.min.css" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #FFFFFF;
+    --ink: #0A5A38;
+    --ink-soft: #3A8A60;
+    --ink-faint: #5AA078;
+    --green: #00B870;
+    --green-deep: #00A060;
+    --green-50: #F0FBF5;
+    --green-100: #E8F8F0;
+    --green-tint: #F5FCF8;
+    --line: #C8EED8;
+    --line-faint: #EAF7F0;
+    --amber-bg: #FFF9E8;
+    --amber-line: #F0D890;
+    --amber-ink: #8A6A10;
+  }
+  body { background: #EAF3EE; font-family: 'Inter', sans-serif; color: var(--ink); padding: 24px; display: flex; justify-content: center; }
+  #shell { width: 100%; max-width: 860px; }
+  .phase-tabs { display: flex; gap: 8px; margin-bottom: 16px; justify-content: center; }
+  .phase-tab {
+    background: #FFFFFF; border: 1px solid var(--line); color: var(--green-deep); padding: 9px 20px;
+    border-radius: 22px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.15s;
+    display: flex; align-items: center; gap: 7px;
+  }
+  .phase-tab:hover { background: var(--green-50); }
+  .phase-tab.active { background: var(--green); color: #fff; border-color: var(--green); }
+
+  #app {
+    background: var(--bg); min-height: 600px; border-radius: 14px; overflow: hidden;
+    position: relative; padding-bottom: 56px; border: 1px solid var(--line); box-shadow: 0 4px 24px rgba(10,90,56,0.08);
+  }
+  .phase { display: none; }
+  .phase.active { display: block; }
+  .screen { display: none; width: 100%; min-height: 544px; }
+  .screen.active { display: flex; flex-direction: column; }
+
+  .topbar { padding: 16px 28px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--line); }
+  .logo { color: var(--green-deep); font-size: 13px; font-weight: 700; letter-spacing: 0.1em; }
+  .clock { font-size: 11px; color: var(--ink-soft); font-weight: 600; }
+  .pill { font-size: 10px; color: var(--green-deep); letter-spacing: 0.12em; background: var(--green-100); border: 1px solid #A0DFC0; padding: 3px 10px; border-radius: 20px; font-weight: 600; }
+
+  .body { flex: 1; padding: 26px 32px; display: flex; flex-direction: column; gap: 12px; overflow: hidden; }
+  .now-label { font-size: 10px; letter-spacing: 0.14em; color: var(--green-deep); text-transform: uppercase; font-weight: 700; }
+  .serif-h { font-family: Georgia, serif; font-weight: 400; color: var(--ink); }
+  .q-title { font-size: 22px; line-height: 1.3; }
+  .q-sub { font-size: 13px; color: var(--ink-soft); line-height: 1.6; }
+
+  .teal-btn { background: var(--green); color: #fff; border: none; padding: 11px 24px; border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer; transition: opacity 0.2s; }
+  .teal-btn:hover { opacity: 0.85; }
+  .ghost-btn { background: var(--green-50); border: 1px solid #A0DFC0; color: var(--green-deep); padding: 11px 20px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; }
+  .ghost-btn:hover { background: #E0F8EC; }
+  .muted-link { background: none; border: none; color: var(--green-deep); font-size: 12px; cursor: pointer; text-decoration: underline; padding: 0; }
+  .muted-link:hover { color: var(--ink); }
+  .bottom-row { display: flex; align-items: center; justify-content: space-between; padding: 14px 28px; border-top: 1px solid var(--line); margin-top: auto; }
+
+  .ai-card { background: var(--green-50); border-left: 3px solid var(--green); border-radius: 0 8px 8px 0; padding: 14px 16px; font-size: 13px; line-height: 1.7; color: var(--ink); }
+  .user-bubble { background: var(--green-100); border: 1px solid #B0E0C8; border-radius: 8px; padding: 12px 14px; font-size: 13px; color: var(--ink); line-height: 1.7; }
+  .answer-box { background: #F8FDFB; border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; font-size: 13.5px; color: var(--ink); line-height: 1.7; }
+  .answer-box.user { background: var(--green-100); border-color: #B0E0C8; }
+
+  .split { display: flex; flex: 1; }
+  .left-panel { width: 40%; padding: 24px; border-right: 1px solid var(--line); display: flex; flex-direction: column; gap: 12px; }
+  .right-panel { width: 60%; padding: 24px; display: flex; flex-direction: column; gap: 10px; }
+  .panel-label { font-size: 10px; letter-spacing: 0.12em; color: var(--green-deep); margin-bottom: 4px; text-transform: uppercase; font-weight: 700; }
+
+  .transcript-box { background: #F8FDFB; border: 1px solid var(--line); border-radius: 8px; padding: 16px; font-size: 13px; line-height: 1.8; color: var(--ink); flex: 1; }
+  .pulse-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--green); margin-right: 7px; animation: blink 1.4s ease-in-out infinite; vertical-align: middle; }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+  .mic-wrap { display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 20px 0 16px; }
+  .mic-btn { width: 68px; height: 68px; border-radius: 50%; background: var(--green); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; animation: micpulse 2s ease-in-out infinite; }
+  @keyframes micpulse { 0%,100%{ box-shadow: 0 0 0 0 rgba(0,184,112,0.35) } 50%{ box-shadow: 0 0 0 16px rgba(0,184,112,0) } }
+
+  .task-card { background: var(--green-tint); border-left: 3px solid var(--green); border-radius: 0 8px 8px 0; padding: 12px 14px; }
+  .task-card.dim { border-left-color: #A0DFC0; opacity: 0.7; }
+  .task-card .task-title { font-size: 13px; font-weight: 700; color: var(--ink); margin-bottom: 4px; }
+  .task-card .task-sub { font-size: 11.5px; color: var(--ink-soft); line-height: 1.55; }
+  .task-tag { display: inline-block; font-size: 10px; color: var(--green-deep); border: 1px solid #A0DFC0; border-radius: 4px; padding: 2px 8px; margin-top: 6px; background: var(--green-100); font-weight: 600; }
+
+  .main-task-title { font-size: 24px; font-weight: 400; color: var(--ink); font-family: Georgia, serif; line-height: 1.2; margin-bottom: 6px; }
+  .main-task-reason { font-size: 13px; color: var(--ink-soft); line-height: 1.6; margin-bottom: 18px; font-style: italic; }
+  .subtask { display: flex; align-items: flex-start; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--line-faint); }
+  .check { width: 18px; height: 18px; border-radius: 5px; border: 1.5px solid #A0DFC0; flex-shrink: 0; margin-top: 1px; cursor: pointer; transition: all 0.15s; display: flex; align-items: center; justify-content: center; }
+  .check.done { background: var(--green); border-color: var(--green); }
+  .check.done::after { content: '✓'; color: #fff; font-size: 12px; font-weight: 700; }
+  .subtask-text { font-size: 14px; color: var(--ink); font-weight: 500; }
+  .subtask.done .subtask-text { text-decoration: line-through; color: #A0C8B0; }
+  .subtask-reason { font-size: 11.5px; color: var(--ink-faint); margin-top: 2px; }
+  .dropdown-toggle { margin-top: 16px; background: var(--green-tint); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; font-size: 12.5px; color: var(--green-deep); font-weight: 600; }
+  .dropdown-toggle:hover { background: var(--green-100); }
+  .dropdown-content { display: none; margin-top: 8px; flex-direction: column; gap: 6px; }
+  .dropdown-content.open { display: flex; }
+  .other-task { background: #FAFDFB; border: 1px solid var(--line-faint); border-radius: 8px; padding: 10px 14px; }
+  .other-task-title { font-size: 13px; color: var(--ink); font-weight: 600; }
+  .other-task-reason { font-size: 11px; color: var(--ink-faint); margin-top: 2px; }
+  .reason-strip { border-top: 1px solid var(--line); padding: 14px 32px; display: flex; align-items: center; gap: 10px; background: var(--green-tint); }
+  .reason-strip .label { font-size: 9px; letter-spacing: 0.12em; color: var(--green-deep); text-transform: uppercase; font-weight: 700; }
+  .reason-strip .text { font-size: 13px; color: var(--ink); font-style: italic; font-family: Georgia, serif; }
+  .drift-btn { margin-left: auto; background: var(--green-50); border: 1px solid var(--green); color: var(--green-deep); font-size: 12px; font-weight: 600; padding: 7px 14px; border-radius: 20px; cursor: pointer; white-space: nowrap; }
+  .drift-btn:hover { background: #E0F8EC; }
+
+  .nudge { margin: 0 32px 14px; background: var(--amber-bg); border: 1px solid var(--amber-line); border-radius: 8px; padding: 12px 16px; display: flex; align-items: center; gap: 12px; animation: slideIn 0.4s ease; }
+  @keyframes slideIn { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+  .nudge-text { font-size: 13px; color: var(--amber-ink); flex: 1; }
+  .nudge-yes { background: #E0B040; color: #4A3800; border: none; padding: 6px 14px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; }
+  .nudge-no { background: none; border: none; color: #A08840; font-size: 12px; cursor: pointer; text-decoration: underline; }
+
+  .modal-stage { flex: 1; position: relative; display: flex; align-items: center; justify-content: center; padding: 24px; background: rgba(10, 60, 40, 0.12); min-height: 480px; }
+  .modal-bg-hint { position: absolute; inset: 0; padding: 28px 32px; opacity: 0.25; pointer-events: none; overflow: hidden; }
+  .modal-card { background: #FFFFFF; border: 1px solid var(--line); border-radius: 14px; padding: 24px; width: 100%; max-width: 440px; box-shadow: 0 8px 32px rgba(10,90,56,0.15); position: relative; z-index: 2; }
+  .modal-handle { width: 36px; height: 4px; background: var(--line); border-radius: 2px; margin: 0 auto 18px; }
+  .modal-q { font-size: 16px; color: var(--ink); font-weight: 400; font-family: Georgia, serif; margin-bottom: 16px; text-align: center; }
+  .drift-input { width: 100%; background: #F8FDFB; border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; font-size: 13px; color: var(--ink); line-height: 1.6; min-height: 64px; font-family: inherit; }
+  .self-scale { display: flex; gap: 8px; margin: 14px 0; }
+  .self-dot { flex: 1; text-align: center; padding: 12px 0; border: 1px solid var(--line); border-radius: 8px; font-size: 12px; color: var(--ink-faint); cursor: pointer; background: #FAFDFB; transition: all 0.15s; font-weight: 500; }
+  .self-dot:hover { border-color: var(--green); }
+  .self-dot.sel { background: var(--green); color: #fff; border-color: var(--green); }
+  .vocab-row { margin: 14px 0; }
+  .vocab-label { font-size: 11px; color: var(--ink-soft); margin-bottom: 8px; text-align: center; }
+  .drift-quick { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+  .quick-chip { background: var(--green-50); border: 1px solid #A0DFC0; color: var(--green-deep); font-size: 12px; padding: 6px 14px; border-radius: 20px; cursor: pointer; transition: all 0.15s; font-weight: 500; }
+  .quick-chip:hover, .quick-chip.sel { background: var(--green); color: #fff; border-color: var(--green); }
+  .modal-actions { display: flex; gap: 10px; justify-content: center; }
+  .intervention { background: var(--green-100); border: 1px solid #A0DFC0; border-radius: 10px; padding: 16px; text-align: center; margin-bottom: 14px; }
+  .intervention .rule { font-size: 13px; color: var(--ink); font-weight: 600; margin-bottom: 6px; }
+  .intervention .reason-recall { font-size: 13px; color: var(--green-deep); font-style: italic; font-family: Georgia, serif; }
+  .observed { background: #F8FDFB; border: 1px dashed #A0DFC0; border-radius: 8px; padding: 10px 14px; font-size: 12px; color: var(--ink-soft); margin-top: 12px; text-align: center; }
+
+  .toast { position: absolute; bottom: 68px; left: 50%; transform: translateX(-50%); background: var(--ink); color: var(--green-100); font-size: 12px; padding: 8px 16px; border-radius: 20px; animation: slideIn 0.4s ease; z-index: 5; }
+
+  .scale-row { display: flex; gap: 8px; margin-top: 4px; }
+  .scale-dot { flex: 1; text-align: center; padding: 10px 0; border: 1px solid var(--line); border-radius: 8px; font-size: 12px; color: var(--ink-faint); cursor: pointer; background: #FAFDFB; transition: all 0.15s; font-weight: 500; }
+  .scale-dot:hover { border-color: var(--green); }
+  .scale-dot.sel { background: var(--green); color: #fff; border-color: var(--green); }
+  .timeline { display: flex; flex-direction: column; margin-top: 4px; }
+  .tl-item { display: flex; gap: 14px; padding: 10px 0; border-bottom: 1px solid var(--line-faint); align-items: flex-start; }
+  .tl-time { font-size: 11px; color: var(--green-deep); font-weight: 700; font-variant-numeric: tabular-nums; min-width: 52px; padding-top: 1px; }
+  .tl-event { font-size: 13px; color: var(--ink); font-weight: 500; }
+  .tl-feel { font-size: 11.5px; color: var(--ink-faint); margin-top: 2px; }
+  .tl-item.logged .tl-time { color: #C09020; }
+  .tl-badge { font-size: 9px; background: var(--amber-bg); border: 1px solid var(--amber-line); color: var(--amber-ink); padding: 1px 7px; border-radius: 10px; margin-left: 8px; font-weight: 600; }
+  .pattern-card { background: var(--green-100); border: 1px solid #A0DFC0; border-radius: 12px; padding: 20px; }
+  .pattern-label { font-size: 10px; letter-spacing: 0.12em; color: var(--green-deep); text-transform: uppercase; font-weight: 700; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+  .pattern-text { font-size: 15px; color: var(--ink); line-height: 1.6; font-family: Georgia, serif; }
+  .pattern-sub { font-size: 12.5px; color: var(--ink-soft); line-height: 1.6; margin-top: 10px; }
+  .rule-draft { background: #FFFFFF; border: 1px dashed var(--green); border-radius: 10px; padding: 16px; display: flex; align-items: center; gap: 12px; }
+  .rule-draft .icon { color: var(--green); font-size: 18px; }
+  .rule-draft-text { flex: 1; font-size: 14px; color: var(--ink); font-weight: 500; }
+  .rule-edit { font-size: 11px; color: var(--green-deep); text-decoration: underline; cursor: pointer; }
+  .draft-preview { background: var(--green-tint); border: 1px solid var(--line); border-radius: 10px; padding: 16px; margin-top: 4px; }
+  .draft-head { font-size: 11px; color: var(--green-deep); font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 12px; display: flex; align-items: center; gap: 6px; }
+  .draft-task { display: flex; align-items: center; gap: 10px; padding: 7px 0; }
+  .draft-bullet { width: 6px; height: 6px; border-radius: 50%; background: var(--green); flex-shrink: 0; }
+  .draft-task.locked .draft-bullet { background: #C09020; }
+  .draft-task-text { font-size: 13px; color: var(--ink); }
+  .draft-tag { font-size: 9px; background: var(--amber-bg); border: 1px solid var(--amber-line); color: var(--amber-ink); padding: 1px 8px; border-radius: 10px; margin-left: auto; font-weight: 600; }
+
+  .center-stage { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 40px 50px; gap: 14px; }
+  .moon { width: 56px; height: 56px; border-radius: 50%; background: var(--green-50); border: 1px solid #A0DFC0; display: flex; align-items: center; justify-content: center; color: var(--green-deep); font-size: 26px; margin-bottom: 8px; }
+  .summary-card { background: var(--green-tint); border: 1px solid var(--line); border-radius: 10px; padding: 14px 18px; width: 100%; max-width: 360px; margin-top: 12px; display: flex; flex-direction: column; gap: 8px; }
+  .summary-line { display: flex; align-items: center; gap: 10px; font-size: 12.5px; color: var(--ink); }
+  .summary-line i { color: var(--green); font-size: 15px; }
+
+  .toggle { width: 34px; height: 19px; background: var(--green); border-radius: 10px; position: relative; flex-shrink: 0; }
+  .toggle::after { content:''; position: absolute; top: 2.5px; left: 17px; width: 14px; height: 14px; background: #fff; border-radius: 50%; }
+  .rule-card { background: var(--green-tint); border: 1px solid var(--line); border-radius: 8px; padding: 11px 14px; display: flex; align-items: center; gap: 12px; font-size: 13px; color: var(--ink); }
+
+  .fade-in { animation: fadeIn 0.5s ease forwards; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+  .nav-bar { position: absolute; bottom: 0; left: 0; right: 0; height: 52px; background: var(--green-tint); border-top: 1px solid var(--line); display: flex; align-items: center; padding: 0 20px; gap: 8px; }
+  .nav-btn { background: var(--green-100); border: 1px solid #A0DFC0; color: var(--green-deep); width: 36px; height: 36px; border-radius: 8px; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.15s; font-weight: 700; }
+  .nav-btn:hover { background: #D0F0E0; border-color: var(--green); }
+  .nav-btn:disabled { opacity: 0.3; cursor: default; }
+  .nav-label { font-size: 10px; color: var(--green-deep); letter-spacing: 0.08em; margin-left: 8px; font-weight: 600; }
+  .nav-cap { font-size: 10px; color: var(--ink-faint); margin-left: 12px; font-style: italic; }
+  .nav-dots { display: flex; gap: 5px; margin-left: auto; }
+  .nav-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--line); transition: background 0.2s; }
+  .nav-dot.active { background: var(--green); }
+  @media (max-width: 720px) {
+    .split { flex-direction: column; }
+    .left-panel, .right-panel { width: 100%; border-right: none; }
+    .nav-cap { display: none; }
+  }
+</style>
+</head>
+<body>
+<div id="shell">
+
+  <div class="phase-tabs">
+    <button class="phase-tab active" data-phase="morning" onclick="switchPhase('morning')"><i class="ti ti-sun"></i> Morning Clarity</button>
+    <button class="phase-tab" data-phase="day" onclick="switchPhase('day')"><i class="ti ti-bolt"></i> Execution</button>
+    <button class="phase-tab" data-phase="night" onclick="switchPhase('night')"><i class="ti ti-moon"></i> Night Reflection</button>
+  </div>
+
+  <div id="app">
+
+    <!-- ===================== MORNING ===================== -->
+    <div class="phase active" id="phase-morning">
+      <div class="screen active" data-s="1">
+        <div class="topbar"><span class="logo">COGLOOP</span></div>
+        <div class="center-stage">
+          <p style="font-size:10px;letter-spacing:0.18em;color:var(--green-deep);text-transform:uppercase;font-weight:700;">Morning Clarity</p>
+          <h1 class="serif-h" style="font-size:30px;line-height:1.35;">What's on your mind<br>today, Sam?</h1>
+          <p style="font-size:13px;color:var(--ink-faint);margin-bottom:18px;">No structure needed. Just think out loud.</p>
+          <div style="display:flex;gap:12px;">
+            <button class="teal-btn" onclick="go('morning',2)"><i class="ti ti-microphone" style="margin-right:6px;"></i>Speak your thoughts</button>
+            <button class="ghost-btn" onclick="go('morning',3)">Type instead</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="screen" data-s="2">
+        <div class="topbar"><span class="logo">COGLOOP</span><span class="pill">LISTENING</span></div>
+        <div style="padding:20px 24px 10px;flex:1;display:flex;flex-direction:column;gap:12px;">
+          <div style="font-size:11px;color:var(--green-deep);display:flex;align-items:center;font-weight:600;"><span class="pulse-dot"></span>Listening...</div>
+          <div class="transcript-box"><span id="transcript-text"></span><span style="display:inline-block;width:2px;height:14px;background:var(--green);margin-left:2px;animation:blink 1s infinite;vertical-align:middle;"></span></div>
+          <p style="font-size:11px;color:#A0C8B0;text-align:center;font-style:italic;">CogLoop is listening, not judging</p>
+        </div>
+        <div class="mic-wrap">
+          <button class="mic-btn" onclick="go('morning',4)" aria-label="Stop"><i class="ti ti-microphone" style="color:#fff;font-size:26px;"></i></button>
+          <div style="display:flex;gap:28px;"><button class="muted-link">Pause</button><button class="muted-link" onclick="go('morning',3)">Switch to text</button></div>
+        </div>
+      </div>
+
+      <div class="screen" data-s="3">
+        <div class="topbar"><span class="logo">COGLOOP</span><span class="pill">TEXT MODE</span></div>
+        <div style="padding:20px 24px 10px;flex:1;display:flex;flex-direction:column;gap:12px;">
+          <div class="transcript-box" style="flex:1;"><p style="font-size:13px;line-height:1.8;">Okay so... I have a call with a potential investor at 2pm and I haven't prepared anything. I know what the product does but I don't know how to talk about traction because we don't really have traction yet. And I keep going back and forth on whether to even pitch for funding right now or just focus on getting one paying customer first. Marcus said just get a customer, but then YC closes applications in two weeks. I also need to follow up with three people from the networking event and I'm avoiding it because I don't know what my ask is. Oh and the landing page copy is due today or it slips another week. I sit down to write it and go blank because I don't even know who my actual customer is. I think that's probably the real problem honestly. I feel like I'm doing a lot but nothing is moving.<span style="display:inline-block;width:2px;height:13px;background:var(--green);margin-left:3px;animation:blink 1s infinite;vertical-align:middle;"></span></p></div>
+          <p style="font-size:11px;color:#A0C8B0;text-align:center;font-style:italic;">Just write. Don't filter. Grammar doesn't matter here.</p>
+        </div>
+        <div class="bottom-row"><button class="muted-link" onclick="go('morning',2)">Switch to voice</button><button class="teal-btn" onclick="go('morning',4)">I'm done thinking</button><button class="muted-link">Add more later</button></div>
+      </div>
+
+      <div class="screen" data-s="4">
+        <div class="topbar"><span class="logo">COGLOOP</span><span class="pill">REFLECTING</span></div>
+        <div class="split" style="flex:1;">
+          <div class="left-panel"><div class="panel-label">Your thoughts</div><div class="transcript-box" style="opacity:0.4;font-size:12px;line-height:1.75;">Okay so... investor call at 2pm, haven't prepared... landing page copy due today... I don't even know who my actual customer is... I feel like I'm doing a lot but nothing is moving.</div></div>
+          <div class="right-panel" style="justify-content:center;gap:18px;">
+            <div class="ai-card fade-in">"That's a lot to be carrying. Before I organize anything — it sounds like underneath all of this there's one question you keep circling: <strong>you don't fully know who your customer is yet, and that's making everything else harder.</strong> The pitch, the landing page, the follow-ups all get easier once that's clear. Does that feel right?"</div>
+            <div style="display:flex;gap:10px;"><button class="teal-btn" onclick="go('morning',5)">Yes, that's it</button><button class="ghost-btn">Not quite</button></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="screen" data-s="5">
+        <div class="topbar"><span class="logo">COGLOOP</span><span class="pill">YOUR CLARITY</span></div>
+        <div class="split" style="flex:1;">
+          <div class="left-panel"><div class="panel-label">Your thoughts</div><div class="transcript-box" style="opacity:0.35;font-size:12px;flex:none;max-height:140px;overflow:hidden;">Okay so... investor call at 2pm... I feel like I'm doing a lot but nothing is moving.</div><div class="ai-card">"Two layers today — urgent deadlines, and the one foundational thing underneath them all. Here's what I'm seeing."</div></div>
+          <div class="right-panel">
+            <div class="panel-label">Today's clarity</div>
+            <div class="task-card fade-in"><div class="task-title">Define your customer</div><div class="task-sub">The root. It's blocking the landing page, the pitch, and your confidence in every conversation.</div><span class="task-tag">Focus · This Morning</span></div>
+            <div class="task-card dim fade-in"><div class="task-title">Write landing page copy</div><div class="task-sub">Developer needs it today. Easier once you've done #1.</div><span class="task-tag">Execution · Mid Morning</span></div>
+            <div class="task-card dim fade-in"><div class="task-title">Prepare for 2pm investor call</div><div class="task-sub">You need a clear story about who you're building for — not traction.</div><span class="task-tag">High Stakes · After Lunch</span></div>
+            <div class="task-card dim fade-in"><div class="task-title">Follow up with 3 contacts</div><div class="task-sub">Short, specific, no big ask.</div><span class="task-tag">Relationships · Afternoon</span></div>
+            <div class="task-card dim fade-in"><div class="task-title">YC application — decide</div><div class="task-sub">Not a task. Just decide and stop letting it float.</div><span class="task-tag">Decision · End of Day</span></div>
+            <p style="font-size:11px;color:var(--green-deep);font-style:italic;margin-top:4px;">Customer clarity goes first because it makes everything else easier. Does this order feel right?</p>
+          </div>
+        </div>
+        <div class="bottom-row"><button class="muted-link">Let me adjust this</button><button class="teal-btn" onclick="go('morning',6)">These feel right →</button></div>
+      </div>
+
+      <div class="screen" data-s="6">
+        <div class="topbar"><span class="logo">COGLOOP</span><span class="pill">YOUR WHY</span></div>
+        <div class="split" style="flex:1;">
+          <div class="left-panel">
+            <div class="panel-label">Your reason</div>
+            <div class="ai-card">"Before we lock this in — why does today matter? Not the tasks. What would it mean if you actually moved on all five?"</div>
+            <div class="user-bubble">It would mean I finally feel like I'm building something real. I'd go to bed feeling like a founder instead of someone pretending to be one.</div>
+            <div class="ai-card fade-in">"Hold onto that. That's your real reason today — not the tasks, that feeling. I'll remind you of it if you drift."</div>
+          </div>
+          <div class="right-panel">
+            <div class="panel-label">Today's clarity</div>
+            <div class="task-card"><div class="task-title">Define your customer</div><span class="task-tag">This Morning</span></div>
+            <div class="task-card dim"><div class="task-title">Write landing page copy</div><span class="task-tag">Mid Morning</span></div>
+            <div class="task-card dim"><div class="task-title">Prepare for investor call</div><span class="task-tag">After Lunch</span></div>
+            <div class="task-card dim"><div class="task-title">Follow up with 3 contacts</div><span class="task-tag">Afternoon</span></div>
+            <div class="task-card dim"><div class="task-title">YC — decide</div><span class="task-tag">End of Day</span></div>
+          </div>
+        </div>
+        <div class="bottom-row"><span></span><button class="teal-btn" onclick="go('morning',7)">Continue →</button></div>
+      </div>
+
+      <div class="screen" data-s="7">
+        <div class="topbar"><span class="logo">COGLOOP</span><span class="pill">FOCUS RULES</span></div>
+        <div class="split" style="flex:1;">
+          <div class="left-panel">
+            <div class="panel-label">What you're protecting today</div>
+            <div class="ai-card">"One last thing — anything you want to protect yourself from today? Anything that tends to derail you?"</div>
+            <div class="user-bubble">Yeah. Slack. And checking Twitter to see what other founders are building. It makes me spiral and compare.</div>
+            <div class="ai-card fade-in">"Got it. Here are your focus rules for today."</div>
+            <div class="rule-card"><div class="toggle"></div><span>No Slack until landing page copy is done</span></div>
+            <div class="rule-card"><div class="toggle"></div><span>No Twitter until after the investor call</span></div>
+            <div class="rule-card"><div class="toggle"></div><span>Two 90-minute deep work blocks</span></div>
+          </div>
+          <div class="right-panel">
+            <div class="panel-label">Today's clarity</div>
+            <div class="task-card"><div class="task-title">Define your customer</div><span class="task-tag">This Morning</span></div>
+            <div class="task-card dim"><div class="task-title">Write landing page copy</div><span class="task-tag">Mid Morning</span></div>
+            <div class="task-card dim"><div class="task-title">Prepare for investor call</div><span class="task-tag">After Lunch</span></div>
+            <div class="task-card dim"><div class="task-title">Follow up with 3 contacts</div><span class="task-tag">Afternoon</span></div>
+            <div class="task-card dim"><div class="task-title">YC — decide</div><span class="task-tag">End of Day</span></div>
+          </div>
+        </div>
+        <div class="bottom-row"><span></span><button class="teal-btn" onclick="go('morning',8)">Start My Day →</button></div>
+      </div>
+
+      <div class="screen" data-s="8">
+        <div class="topbar"><span class="logo">COGLOOP</span></div>
+        <div class="center-stage">
+          <div class="summary-card" style="margin-bottom:14px;">
+            <div style="font-size:12px;color:var(--ink);font-weight:600;display:flex;justify-content:space-between;"><span>Define your customer</span><span style="color:var(--green-deep);font-size:10px;">This Morning</span></div>
+            <div style="font-size:12px;color:var(--ink-soft);display:flex;justify-content:space-between;"><span>Write landing page copy</span><span style="font-size:10px;">Mid Morning</span></div>
+            <div style="font-size:12px;color:var(--ink-soft);display:flex;justify-content:space-between;"><span>Prepare for investor call</span><span style="font-size:10px;">After Lunch</span></div>
+            <div style="font-size:12px;color:var(--ink-soft);display:flex;justify-content:space-between;"><span>Follow up with contacts</span><span style="font-size:10px;">Afternoon</span></div>
+            <div style="font-size:12px;color:var(--ink-soft);display:flex;justify-content:space-between;"><span>YC — decide</span><span style="font-size:10px;">End of Day</span></div>
+          </div>
+          <h2 class="serif-h" style="font-size:32px;">You're clear, Sam.</h2>
+          <p style="font-size:16px;color:var(--ink-soft);">Go do your thing.</p>
+          <p style="font-size:13px;color:var(--green-deep);font-style:italic;">"Feel like a founder, not someone pretending."</p>
+        </div>
+      </div>
+
+      <div class="nav-bar" data-navfor="morning">
+        <button class="nav-btn nb-prev" aria-label="Previous">←</button>
+        <button class="nav-btn nb-next" aria-label="Next">→</button>
+        <span class="nav-label nl"></span><span class="nav-cap nc"></span>
+        <div class="nav-dots nd"></div>
+      </div>
+    </div>
+
+    <!-- ===================== DAY / EXECUTION ===================== -->
+    <div class="phase" id="phase-day">
+      <div class="screen active" data-s="1">
+        <div class="topbar"><span class="logo">COGLOOP</span><span class="clock">10:24 AM · Deep work block 1</span></div>
+        <div class="body">
+          <div class="now-label">Right now</div>
+          <div class="main-task-title">Define your customer</div>
+          <div class="main-task-reason">"The root. Everything else gets easier once this is clear."</div>
+          <div class="subtask"><div class="check" onclick="this.classList.toggle('done');this.parentElement.classList.toggle('done')"></div><div><div class="subtask-text">Write one sentence: who is this for?</div><div class="subtask-reason">Start absurdly small. One sentence, that's the whole bar.</div></div></div>
+          <div class="subtask"><div class="check" onclick="this.classList.toggle('done');this.parentElement.classList.toggle('done')"></div><div><div class="subtask-text">Describe their life before they find you</div></div></div>
+          <div class="subtask"><div class="check" onclick="this.classList.toggle('done');this.parentElement.classList.toggle('done')"></div><div><div class="subtask-text">Name the one moment they'd need this most</div><div class="subtask-reason">This becomes your landing page headline later.</div></div></div>
+          <div class="dropdown-toggle" onclick="var d=this.nextElementSibling;d.classList.toggle('open');this.querySelector('.chev').textContent=d.classList.contains('open')?'▲':'▼'"><span>Rest of today · 4 tasks</span><span class="chev">▼</span></div>
+          <div class="dropdown-content">
+            <div class="other-task"><div class="other-task-title">Write landing page copy</div><div class="other-task-reason">Easier once customer is defined.</div></div>
+            <div class="other-task"><div class="other-task-title">Prepare for 2pm investor call</div><div class="other-task-reason">A clear story about who you're building for.</div></div>
+            <div class="other-task"><div class="other-task-title">Follow up with 3 contacts</div><div class="other-task-reason">Short, specific, no big ask.</div></div>
+            <div class="other-task"><div class="other-task-title">YC application — decide</div><div class="other-task-reason">Just decide and stop letting it float.</div></div>
+          </div>
+        </div>
+        <div class="reason-strip"><div><div class="label">Today's reason</div><div class="text">"Feel like a founder, not someone pretending."</div></div><button class="drift-btn" onclick="go('day',3)">I'm drifting</button></div>
+      </div>
+
+      <div class="screen" data-s="2">
+        <div class="topbar"><span class="logo">COGLOOP</span><span class="clock">10:24 AM · Deep work block 1</span></div>
+        <div class="body">
+          <div class="now-label">Right now</div>
+          <div class="main-task-title">Define your customer</div>
+          <div class="main-task-reason">"The root. Everything else gets easier once this is clear."</div>
+          <div class="subtask done"><div class="check done"></div><div><div class="subtask-text">Write one sentence: who is this for?</div></div></div>
+          <div class="subtask"><div class="check"></div><div><div class="subtask-text">Describe their life before they find you</div></div></div>
+          <div class="subtask"><div class="check"></div><div><div class="subtask-text">Name the one moment they'd need this most</div></div></div>
+          <div class="dropdown-toggle"><span>Rest of today · 4 tasks</span><span>▲</span></div>
+          <div class="dropdown-content open">
+            <div class="other-task"><div class="other-task-title">Write landing page copy</div><div class="other-task-reason">Easier once customer is defined.</div></div>
+            <div class="other-task"><div class="other-task-title">Prepare for 2pm investor call</div><div class="other-task-reason">A clear story about who you're building for.</div></div>
+            <div class="other-task"><div class="other-task-title">Follow up with 3 contacts</div><div class="other-task-reason">Short, specific, no big ask.</div></div>
+            <div class="other-task"><div class="other-task-title">YC application — decide</div><div class="other-task-reason">Just decide and stop letting it float.</div></div>
+          </div>
+        </div>
+        <div class="reason-strip"><div><div class="label">Today's reason</div><div class="text">"Feel like a founder, not someone pretending."</div></div><button class="drift-btn" onclick="go('day',3)">I'm drifting</button></div>
+      </div>
+
+      <div class="screen" data-s="3">
+        <div class="topbar"><span class="logo">COGLOOP</span><span class="clock">11:02 AM · Block running over</span></div>
+        <div class="nudge"><i class="ti ti-bell" style="color:#C09020;font-size:18px;"></i><span class="nudge-text">Quick gut check — how's your focus right now?</span><button class="nudge-yes" onclick="go('day',4)">Check in</button><button class="nudge-no" onclick="go('day',1)">All good</button></div>
+        <div class="body" style="opacity:0.5;">
+          <div class="now-label">Right now</div>
+          <div class="main-task-title">Define your customer</div>
+          <div class="main-task-reason">"The root. Everything else gets easier once this is clear."</div>
+          <div class="subtask"><div class="check"></div><div><div class="subtask-text">Write one sentence: who is this for?</div></div></div>
+          <div class="subtask"><div class="check"></div><div><div class="subtask-text">Describe their life before they find you</div></div></div>
+        </div>
+        <div class="reason-strip"><div><div class="label">Today's reason</div><div class="text">"Feel like a founder, not someone pretending."</div></div><button class="drift-btn" onclick="go('day',4)">I'm drifting</button></div>
+      </div>
+
+      <div class="screen" data-s="4">
+        <div class="topbar"><span class="logo">COGLOOP</span><span class="pill">CHECK-IN</span></div>
+        <div class="modal-stage">
+          <div class="modal-bg-hint"><div class="now-label">Right now</div><div class="main-task-title">Define your customer</div></div>
+          <div class="modal-card">
+            <div class="modal-handle"></div>
+            <div class="modal-q">How's your focus right now, Sam?</div>
+            <div class="self-scale"><div class="self-dot">Locked in</div><div class="self-dot sel">Slipping</div><div class="self-dot">Gone</div></div>
+            <div class="vocab-row"><div class="vocab-label">If you can name it — what's pulling you? (optional)</div><div class="drift-quick"><span class="quick-chip">Tired</span><span class="quick-chip">Stuck / task feels fuzzy</span><span class="quick-chip">Hungry</span><span class="quick-chip sel">Comparison</span><span class="quick-chip">Not sure</span></div></div>
+            <div class="modal-actions"><button class="teal-btn" onclick="go('day',5)">Talk it through</button></div>
+            <div class="observed"><i class="ti ti-eye" style="margin-right:4px;"></i>For what it's worth: you've been on this block 38 min with nothing logged.</div>
+          </div>
+        </div>
+        <div class="reason-strip" style="opacity:0;"><div></div></div>
+      </div>
+
+      <div class="screen" data-s="5">
+        <div class="topbar"><span class="logo">COGLOOP</span><span class="pill">CHECK-IN</span></div>
+        <div class="modal-stage">
+          <div class="modal-bg-hint"><div class="now-label">Right now</div><div class="main-task-title">Define your customer</div></div>
+          <div class="modal-card">
+            <div class="modal-handle"></div>
+            <div class="ai-card">"You named it as comparison — and that's the exact thing you flagged this morning. It tends to pull you out of your own work and into everyone else's. You saw this coming."</div>
+            <div class="intervention"><div class="rule"><i class="ti ti-lock" style="margin-right:5px;"></i>Your rule: No Twitter until after the investor call</div><div class="reason-recall">"Feel like a founder, not someone pretending."</div></div>
+            <div class="ai-card" style="margin-bottom:18px;">"You're one sentence away from real progress on #1. Want to close the tab and take just that one sentence?"</div>
+            <div class="modal-actions"><button class="teal-btn" onclick="go('day',6)">Okay, back to it</button><button class="ghost-btn" onclick="go('day',6)">I need a real break</button></div>
+          </div>
+        </div>
+        <div class="reason-strip" style="opacity:0;"><div></div></div>
+      </div>
+
+      <div class="screen" data-s="6">
+        <div class="topbar"><span class="logo">COGLOOP</span><span class="pill">CHECK-IN</span></div>
+        <div class="modal-stage">
+          <div class="modal-bg-hint"><div class="now-label">Right now</div><div class="main-task-title">Define your customer</div></div>
+          <div class="modal-card">
+            <div class="modal-handle"></div>
+            <div class="modal-q" style="margin-bottom:10px;">Want me to note this for tonight?</div>
+            <p style="font-size:12.5px;color:var(--ink-soft);text-align:center;line-height:1.6;margin-bottom:18px;">I'll log <em>"11:02 — comparison, task felt fuzzy"</em> so we can spot the pattern in your reflection. Only if you want.</p>
+            <div class="modal-actions"><button class="teal-btn" onclick="logDrift(true)">Yes, note it</button><button class="ghost-btn" onclick="logDrift(false)">No, keep it private</button></div>
+          </div>
+        </div>
+        <div class="reason-strip" style="opacity:0;"><div></div></div>
+      </div>
+
+      <div class="screen" data-s="7">
+        <div class="topbar"><span class="logo">COGLOOP</span><span class="clock">11:04 AM · Back in block 1</span></div>
+        <div class="body">
+          <div class="now-label">Right now</div>
+          <div class="main-task-title">Define your customer</div>
+          <div class="main-task-reason">"The root. Everything else gets easier once this is clear."</div>
+          <div class="subtask done"><div class="check done"></div><div><div class="subtask-text">Write one sentence: who is this for?</div></div></div>
+          <div class="subtask"><div class="check"></div><div><div class="subtask-text">Describe their life before they find you</div><div class="subtask-reason">You're here now. Just this next one.</div></div></div>
+          <div class="subtask"><div class="check"></div><div><div class="subtask-text">Name the one moment they'd need this most</div></div></div>
+        </div>
+        <div class="reason-strip"><div><div class="label">Today's reason</div><div class="text">"Feel like a founder, not someone pretending."</div></div><button class="drift-btn" onclick="go('day',1)">I'm drifting</button></div>
+      </div>
+
+      <div class="nav-bar" data-navfor="day">
+        <button class="nav-btn nb-prev" aria-label="Previous">←</button>
+        <button class="nav-btn nb-next" aria-label="Next">→</button>
+        <span class="nav-label nl"></span><span class="nav-cap nc"></span>
+        <div class="nav-dots nd"></div>
+      </div>
+    </div>
+
+    <!-- ===================== NIGHT ===================== -->
+    <div class="phase" id="phase-night">
+      <div class="screen active" data-s="1">
+        <div class="topbar"><span class="logo">COGLOOP</span><span class="clock">9:48 PM · Night reflection</span></div>
+        <div class="center-stage">
+          <p style="font-size:10px;letter-spacing:0.18em;color:var(--green-deep);text-transform:uppercase;font-weight:700;">Close the loop</p>
+          <h1 class="serif-h" style="font-size:28px;line-height:1.35;">How did today go,<br>Sam?</h1>
+          <p style="font-size:13px;color:var(--ink-soft);max-width:340px;line-height:1.6;">Three quick questions. Not a report card — just looking for what today can teach us about tomorrow.</p>
+          <div style="margin-top:18px;"><button class="teal-btn" onclick="go('night',2)">Start reflecting →</button></div>
+        </div>
+      </div>
+
+      <div class="screen" data-s="2">
+        <div class="topbar"><span class="logo">COGLOOP</span><span class="pill">1 OF 3</span></div>
+        <div class="body">
+          <div class="now-label">Question one</div>
+          <div class="q-title serif-h">Was your plan satisfying? Did your reasons feel real?</div>
+          <div class="scale-row"><div class="scale-dot">Not really</div><div class="scale-dot sel">Mostly</div><div class="scale-dot">Completely</div></div>
+          <div class="answer-box user">"Mostly yes. Defining the customer felt heavy at first but once I had the one sentence, everything got lighter. The reason — feeling like a real founder — actually pulled me back when I drifted."</div>
+          <div class="ai-card fade-in">"That tracks with what I saw today. The reason wasn't just words — it did work for you when it counted."</div>
+        </div>
+        <div class="bottom-row"><span></span><button class="teal-btn" onclick="go('night',3)">Next →</button></div>
+      </div>
+
+      <div class="screen" data-s="3">
+        <div class="topbar"><span class="logo">COGLOOP</span><span class="pill">2 OF 3</span></div>
+        <div class="body">
+          <div class="now-label">Question two</div>
+          <div class="q-title serif-h">Did you follow through? What got in the way?</div>
+          <div class="q-sub">Here's what your day actually looked like — pulled from today, not memory.</div>
+          <div class="timeline">
+            <div class="tl-item"><div class="tl-time">10:24</div><div><div class="tl-event">Started "Define your customer"</div><div class="tl-feel">Focused, slightly anxious</div></div></div>
+            <div class="tl-item logged"><div class="tl-time">11:02</div><div><div class="tl-event">Drifted — comparison <span class="tl-badge">you logged this</span></div><div class="tl-feel">Task had gone abstract</div></div></div>
+            <div class="tl-item"><div class="tl-time">11:04</div><div><div class="tl-event">Returned, finished the one sentence</div><div class="tl-feel">Relieved, back in flow</div></div></div>
+            <div class="tl-item"><div class="tl-time">2:00</div><div><div class="tl-event">Investor call — went better than expected</div><div class="tl-feel">Clear story, didn't need traction</div></div></div>
+          </div>
+        </div>
+        <div class="bottom-row"><span></span><button class="teal-btn" onclick="go('night',4)">Next →</button></div>
+      </div>
+
+      <div class="screen" data-s="4">
+        <div class="topbar"><span class="logo">COGLOOP</span><span class="pill">3 OF 3</span></div>
+        <div class="body">
+          <div class="now-label">Question three</div>
+          <div class="q-title serif-h">When did you drift? What was underneath it?</div>
+          <div class="pattern-card fade-in">
+            <div class="pattern-label"><i class="ti ti-chart-dots"></i> The pattern, neutrally</div>
+            <div class="pattern-text">Your one drift today happened the moment the task turned abstract — "describe the customer" with no concrete next step. That's when comparison pulled you.</div>
+            <div class="pattern-sub">This isn't a willpower thing. Abstract tasks create a gap, and the gap is where comparison rushes in. You did the right fix yourself: you made it concrete and came right back.</div>
+          </div>
+          <div class="ai-card">"One day isn't a trend yet — I'll watch whether this repeats before calling it a real pattern. But it's worth a small experiment for tomorrow."</div>
+        </div>
+        <div class="bottom-row"><span></span><button class="teal-btn" onclick="go('night',5)">See tomorrow's experiment →</button></div>
+      </div>
+
+      <div class="screen" data-s="5">
+        <div class="topbar"><span class="logo">COGLOOP</span><span class="pill">CARRY FORWARD</span></div>
+        <div class="body">
+          <div class="now-label">Tomorrow's rule</div>
+          <div class="q-title serif-h" style="font-size:20px;">One small change, based on today</div>
+          <div class="rule-draft fade-in"><i class="ti ti-arrow-right-circle icon"></i><div class="rule-draft-text">Break every abstract task into one concrete first step before starting.</div><span class="rule-edit">edit</span></div>
+          <div class="ai-card">"This goes straight into tomorrow's planning. When we hit a fuzzy task in the morning, I'll ask you for its one concrete step first — so the gap never opens."</div>
+          <div style="display:flex;gap:10px;margin-top:4px;"><button class="teal-btn" onclick="go('night',6)">Lock it in for tomorrow</button><button class="ghost-btn" onclick="go('night',6)">Let me reword it</button></div>
+        </div>
+        <div class="bottom-row"><span></span><span style="font-size:11px;color:var(--ink-faint);font-style:italic;">This rule will be waiting in your morning plan</span></div>
+      </div>
+
+      <div class="screen" data-s="6">
+        <div class="topbar"><span class="logo">COGLOOP</span><span class="pill">DRAFT READY</span></div>
+        <div class="body">
+          <div class="now-label">Tomorrow, started for you</div>
+          <div class="q-sub" style="margin-bottom:2px;">Nothing's locked except your rule. This is a warm starting point — you'll shape it to your real energy in the morning.</div>
+          <div class="draft-preview fade-in">
+            <div class="draft-head"><i class="ti ti-sun"></i> Tomorrow's draft</div>
+            <div class="draft-task locked"><div class="draft-bullet"></div><div class="draft-task-text">Rule: one concrete step before any abstract task</div><span class="draft-tag">locked</span></div>
+            <div class="draft-task"><div class="draft-bullet"></div><div class="draft-task-text">Finish customer definition (2 subtasks left)</div></div>
+            <div class="draft-task"><div class="draft-bullet"></div><div class="draft-task-text">Write landing page copy — now unblocked</div></div>
+            <div class="draft-task"><div class="draft-bullet"></div><div class="draft-task-text">Send the 3 follow-ups you prepped</div></div>
+            <div class="draft-task"><div class="draft-bullet"></div><div class="draft-task-text">YC decision — still floating, carried over</div></div>
+          </div>
+          <div class="ai-card">"I carried over what's unfinished and dropped what you closed. Tomorrow morning, this is where we'll start — not a blank page."</div>
+        </div>
+        <div class="bottom-row"><span></span><button class="teal-btn" onclick="go('night',7)">That's enough for today →</button></div>
+      </div>
+
+      <div class="screen" data-s="7">
+        <div class="topbar"><span class="logo">COGLOOP</span></div>
+        <div class="center-stage">
+          <div class="moon"><i class="ti ti-moon"></i></div>
+          <h2 class="serif-h" style="font-size:30px;">Rest now, Sam.</h2>
+          <p style="font-size:15px;color:var(--ink-soft);">The loop is closed. Tomorrow already has a starting point.</p>
+          <div class="summary-card">
+            <div class="summary-line"><i class="ti ti-check"></i> You felt like a founder today, not someone pretending</div>
+            <div class="summary-line"><i class="ti ti-lock"></i> One rule locked: concrete step before abstract tasks</div>
+            <div class="summary-line"><i class="ti ti-sun"></i> Tomorrow's draft is waiting, not forcing</div>
+          </div>
+          <p style="font-size:12px;color:var(--ink-faint);font-style:italic;margin-top:14px;">See you in the morning.</p>
+        </div>
+      </div>
+
+      <div class="nav-bar" data-navfor="night">
+        <button class="nav-btn nb-prev" aria-label="Previous">←</button>
+        <button class="nav-btn nb-next" aria-label="Next">→</button>
+        <span class="nav-label nl"></span><span class="nav-cap nc"></span>
+        <div class="nav-dots nd"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  const PHASES = {
+    morning: { total: 8, caps: { 1:"Entry — open question", 2:"Voice mode (live transcript)", 3:"Text mode", 4:"AI reflects before organizing", 5:"The reveal — your clarity", 6:"Your why", 7:"Focus rules", 8:"You're clear — send-off" }, cur: 1, typed: false },
+    day: { total: 7, caps: { 1:"Work screen — task focus", 2:"Other tasks dropdown", 3:"Gentle nudge — asks your focus", 4:"Self-assess first, then observe", 5:"AI reflects + resurfaces reason", 6:"Note this for tonight?", 7:"Back to work — drift logged" }, cur: 1 },
+    night: { total: 7, caps: { 1:"Reflection entry", 2:"Q1 — was the plan satisfying", 3:"Q2 — follow-through (drift log)", 4:"Q3 — the pattern, neutrally", 5:"Tomorrow's rule — carry forward", 6:"Warm draft for tomorrow", 7:"Calm rest-now send-off" }, cur: 1 }
+  };
+  let activePhase = 'morning';
+
+  const TRANSCRIPT = "Okay so... I have a call with a potential investor at 2pm and I haven't prepared anything. I know what the product does but I don't know how to talk about traction because we don't really have traction yet. I keep going back and forth on whether to pitch for funding now or just get one paying customer first. Marcus said get a customer, but YC closes in two weeks. I need to follow up with three people from the networking event and I'm avoiding it because I don't know what my ask is. The landing page copy is due today or it slips another week. I sit down to write it and go blank because I don't even know who my actual customer is. I feel like I'm doing a lot but nothing is moving.";
+  let typingTimer = null, typingIndex = 0;
+
+  function buildDots(phase) {
+    const bar = document.querySelector('.nav-bar[data-navfor="' + phase + '"]');
+    const dots = bar.querySelector('.nd');
+    dots.innerHTML = '';
+    for (let i = 0; i < PHASES[phase].total; i++) {
+      const d = document.createElement('div');
+      d.className = 'nav-dot' + (i === 0 ? ' active' : '');
+      dots.appendChild(d);
+    }
+    bar.querySelector('.nb-prev').onclick = () => navStep(-1);
+    bar.querySelector('.nb-next').onclick = () => navStep(1);
+  }
+
+  function updateNav(phase) {
+    const P = PHASES[phase];
+    const bar = document.querySelector('.nav-bar[data-navfor="' + phase + '"]');
+    bar.querySelector('.nl').textContent = 'Screen ' + P.cur + ' of ' + P.total;
+    bar.querySelector('.nc').textContent = P.caps[P.cur];
+    bar.querySelector('.nb-prev').disabled = P.cur === 1;
+    bar.querySelector('.nb-next').disabled = P.cur === P.total;
+    const dots = bar.querySelectorAll('.nav-dot');
+    dots.forEach((d, i) => d.className = 'nav-dot' + (i + 1 === P.cur ? ' active' : ''));
+  }
+
+  function stopTyping() {
+    if (typingTimer) { clearInterval(typingTimer); typingTimer = null; }
+    typingIndex = 0;
+    const el = document.getElementById('transcript-text');
+    if (el) el.textContent = '';
+  }
+  function startTyping() {
+    stopTyping();
+    const el = document.getElementById('transcript-text');
+    if (!el) return;
+    typingTimer = setInterval(() => {
+      if (typingIndex < TRANSCRIPT.length) { el.textContent += TRANSCRIPT[typingIndex++]; }
+      else { clearInterval(typingTimer); }
+    }, 18);
+  }
+
+  function go(phase, n) {
+    const P = PHASES[phase];
+    if (n < 1 || n > P.total) return;
+    const container = document.getElementById('phase-' + phase);
+    container.querySelector('.screen[data-s="' + P.cur + '"]').classList.remove('active');
+    P.cur = n;
+    container.querySelector('.screen[data-s="' + P.cur + '"]').classList.add('active');
+    if (phase === 'morning' && n === 2) startTyping(); else stopTyping();
+    updateNav(phase);
+  }
+  function navStep(dir) { go(activePhase, PHASES[activePhase].cur + dir); }
+
+  function switchPhase(phase) {
+    activePhase = phase;
+    document.querySelectorAll('.phase-tab').forEach(t => t.classList.toggle('active', t.dataset.phase === phase));
+    document.querySelectorAll('.phase').forEach(p => p.classList.remove('active'));
+    document.getElementById('phase-' + phase).classList.add('active');
+    if (phase === 'morning' && PHASES.morning.cur === 2) startTyping(); else stopTyping();
+    updateNav(phase);
+  }
+
+  function logDrift(noted) {
+    go('day', 7);
+    if (noted) {
+      const t = document.createElement('div');
+      t.className = 'toast';
+      t.textContent = 'Logged for tonight ✓  11:02 — comparison';
+      document.querySelector('#phase-day .screen[data-s="7"]').appendChild(t);
+      setTimeout(() => t.remove(), 3500);
+    }
+  }
+
+  ['morning','day','night'].forEach(buildDots);
+  ['morning','day','night'].forEach(updateNav);
+</script>
+</body>
+</html>
